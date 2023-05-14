@@ -1,9 +1,10 @@
 #include <iostream>
 #include <chrono>
+#include "vec3.h" 
 
 const int nx = 1200, ny = 800;
 const int tx = 16, ty = 16;
-float *fb;
+vec3 *fb;
 constexpr const int num_pixels = nx * ny;
 
 #define checkCudaErrors(status)                   \
@@ -19,17 +20,17 @@ constexpr const int num_pixels = nx * ny;
 
 
 void prep() {
-    checkCudaErrors(cudaMallocManaged(&fb, num_pixels * 3 * sizeof(float)));
+    checkCudaErrors(cudaMallocManaged(&fb, num_pixels * sizeof(vec3)));
 }
 
-__global__ void render(float *fb, int max_x, int max_y) {
+__global__ void render(vec3 *fb, int max_x, int max_y) {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
     if (x >= max_x || y >= max_y) return;
-    int idx = y * max_x * 3 + x * 3;
-    fb[idx] = float(x) / (max_x - 1);
-    fb[idx + 1] = float(y) / (max_y - 1);
-    fb[idx + 2] = 0.25;
+    int idx = y * max_x + x;
+    fb[idx] = vec3(float(x) / (max_x - 1), \
+                   float(y) / (max_y - 1), \
+                   0.25f);
 }
 
 int main() {
@@ -49,10 +50,10 @@ int main() {
     std::cout << "P3\n" << nx << " " << ny << "\n255\n";
     for (int j = ny - 1; j >= 0; j--) {
         for (int i = 0; i < nx; i++) {
-            size_t pixel_index = j * 3 * nx + i * 3;
-            float r = fb[pixel_index + 0];
-            float g = fb[pixel_index + 1];
-            float b = fb[pixel_index + 2];
+            size_t pixel_index = j * nx + i;
+            float r = fb[pixel_index].x();
+            float g = fb[pixel_index].y();
+            float b = fb[pixel_index].z();
             int ir = int(255.99 * r);
             int ig = int(255.99 * g);
             int ib = int(255.99 * b);
