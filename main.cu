@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include "vec3.h" 
+#include "ray.h"
 
 const int nx = 1200, ny = 800;
 const int tx = 16, ty = 16;
@@ -21,6 +22,12 @@ constexpr const int num_pixels = nx * ny;
 
 void prep() {
     checkCudaErrors(cudaMallocManaged(&fb, num_pixels * sizeof(vec3)));
+}
+
+__device__ color ray_color(const ray& r) {
+    vec3 unit_direction = unit_vector(r.direction());
+    float t = (unit_direction.y() + 1.0f) * 0.5;
+    return vec3(1.0f, 1.0f, 1.0f) * (1.0f - t) + vec3(0.5f, 0.7f, 1.0f) * t;
 }
 
 __global__ void render(vec3 *fb, int max_x, int max_y) {
