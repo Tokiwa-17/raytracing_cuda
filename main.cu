@@ -2,6 +2,8 @@
 #include <chrono>
 #include "vec3.h" 
 #include "ray.h"
+#include "hitable.h"
+#include "sphere.h"
 
 const int nx = 1200, ny = 800;
 const int tx = 16, ty = 16;
@@ -24,10 +26,28 @@ void prep() {
     checkCudaErrors(cudaMallocManaged(&fb, num_pixels * sizeof(vec3)));
 }
 
+__device__ float hit_sphere(const vec3 &center, float radius, const ray &r) {
+    vec3 oc = r.origin() - center;
+    float a = dot(r.direction(), r.direction());
+    float half_b = dot(oc, r.direction());
+    float c = oc.length_squared() - radius * radius;
+    float discriminant = half_b * half_b - a * c;
+    if (discriminant < 0) return -1.0f;
+    else return (-half_b - sqrt(discriminant)) / a;
+}
+
 __device__ color ray_color(const ray& r) {
+    sphere sph{vec3(0.0f, 0.0f, -1.0f), 0.5};
+    hit_record rec;
+    float t = -1.0f;
+    if (sph.hit(r, 0.0f, 1e5, rec)) t = rec.t;
+    if (t > 0.0) {
+        vec3 N = unit_vector(r.at(t) - vec3(0, 0, -1));
+        return 0.5 * color(N.x() + 1, N.y() + 1, N.z() + 1);
+    }
     vec3 unit_direction = unit_vector(r.direction());
-    float t = (unit_direction.y() + 1.0f) * 0.5;
-    return vec3(1.0f, 1.0f, 1.0f) * (1.0f - t) + vec3(0.5f, 0.7f, 1.0f) * t;
+    float k = (unit_direction.y() + 1.0f) * 0.5;
+    return vec3(1.0f, 1.0f, 1.0f) * (1.0f - k) + vec3(0.5f, 0.7f, 1.0f) * k;
 }
 
 __global__ void render(vec3 *fb, int max_x, int max_y) {
