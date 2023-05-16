@@ -34,10 +34,23 @@ __global__ void render(vec3 *fb, int max_x, int max_y) {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     int y = blockDim.y * blockIdx.y + threadIdx.y;
     if (x >= max_x || y >= max_y) return;
+    constexpr const float aspect_ratio = 16.0 / 9.0;
+    float viewport_height = 2.0f;
+    float viewport_width = viewport_height * aspect_ratio;
+    float focal_length = 1.0f; 
+
+    vec3 origin {0, 0, 0};
+    vec3 horizontal {viewport_width, 0, 0};
+    vec3 vertical {0, viewport_height, 0};
+    vec3 lower_left_corner = origin - horizontal / 2 - vertical / 2 - vec3(0, 0, focal_length);
+
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    float u = float(i) / max_x, v = float(j) / max_y;
+    ray r {origin, lower_left_corner + horizontal * u + vertical * v - origin};
+    color pixel_color = ray_color(r);
     int idx = y * max_x + x;
-    fb[idx] = vec3(float(x) / (max_x - 1), \
-                   float(y) / (max_y - 1), \
-                   0.25f);
+    fb[idx] = pixel_color;
 }
 
 int main() {
